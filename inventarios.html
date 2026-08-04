@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HARES DE MÉXICO - Control de Inventarios y Producción</title>
+  
+  <!-- SDK de Supabase cargado en el head -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --primary: #1e293b;
+      --accent: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 260px;
+      background-color: var(--primary);
+      color: white;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sidebar h1 { font-size: 1.1rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd; }
+    .nav-btn {
+      background: none; border: none; color: #cbd5e1; text-align: left; padding: 12px 15px;
+      border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: 0.2s;
+    }
+    .nav-btn:hover, .nav-btn.active { background-color: var(--accent); color: white; }
+
+    /* Main Content */
+    .content { flex: 1; padding: 30px; overflow-y: auto; }
+    .header-panel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+    th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+    th { background-color: #f1f5f9; font-weight: 600; }
+
+    /* UI Controls */
+    .btn { background-color: var(--accent); color: white; border: none; padding: 9px 16px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background-color: #64748b; }
+    .btn-success { background-color: var(--success); }
+    .btn-danger { background-color: var(--danger); }
+    
+    input, select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 5px; outline: none; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Autocomplete Dropdown UI */
+    .autocomplete-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .suggestions-box {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 0 0 6px 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .suggestion-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .suggestion-item:hover {
+      background-color: #f1f5f9;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      display: inline-block;
+    }
+    .status-badge.ok { background-color: #dcfce7; color: #15803d; }
+    .status-badge.err { background-color: #fee2e2; color: #b91c1c; }
+
+    /* Debug Console Styling */
+    .debug-box {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 550px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR MENU IZQUIERDO -->
+  <aside class="sidebar">
+    <h1>HARES DE MÉXICO</h1>
+    <button class="nav-btn active" onclick="showTab('tab-kardex', this)">📊 Stock / Control a Fecha</button>
+    <button class="nav-btn" onclick="showTab('tab-catalogo', this)">📚 Catálogo de Productos y Componentes</button>
+    <button class="nav-btn" onclick="showTab('tab-productos', this)">➕ Alta de Productos</button>
+    <button class="nav-btn" onclick="showTab('tab-compras', this)">🛒 Compras y Entradas</button>
+    <button class="nav-btn" onclick="showTab('tab-ventas', this)">🏷️ Ventas y Salidas</button>
+    <button class="nav-btn" onclick="showTab('tab-produccion', this)">🏭 Órdenes de Producción</button>
+    <button class="nav-btn" onclick="showTab('tab-surtido', this)">📦 Surtido de Almacén</button>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <main class="content">
+
+    <!-- TAB 1: KARDEX & INVENTARIO A LA FECHA -->
+    <section id="tab-kardex" class="tab-content active">
+      <div class="header-panel">
+        <h2>Control de Inventario de Componentes</h2>
+        <div>
+          <label>Consultar a la Fecha: </label>
+          <input type="date" id="filtroFecha" onchange="cargarStockAFecha()">
+        </div>
+      </div>
+      
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU Componente</th>
+              <th>Descripción</th>
+              <th>Unidad</th>
+              <th>Stock a la Fecha</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tablaKardex">
+            <tr><td colspan="5" style="text-align:center;">Cargando inventario...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- OPCIÓN MENÚ: CATÁLOGO DE PRODUCTOS Y COMPONENTES -->
+    <section id="tab-catalogo" class="tab-content">
+      <div class="header-panel">
+        <h2>Catálogo de Productos y Componentes</h2>
+        <button class="btn btn-secondary" onclick="cargarCatalogoCompleto()">🔄 Actualizar Datos</button>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+          <div>Estado Conexión Insumos: <span id="statusInsumos" class="status-badge">Verificando...</span></div>
+          <div>Estado Conexión Padres: <span id="statusPadres" class="status-badge">Verificando...</span></div>
+        </div>
+
+        <h3 style="margin-top: 10px;">Componentes e Insumos (Materia Prima)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU Componente</th>
+              <th>Nombre / Descripción</th>
+              <th>Unidad de Medida</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCatInsumos">
+            <tr><td colspan="3" style="text-align:center;">Consultando Supabase...</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top: 25px;">Productos Padre (Kits / Ensambles)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU Padre</th>
+              <th>Nombre / Descripción</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCatPadres">
+            <tr><td colspan="2" style="text-align:center;">Consultando Supabase...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB: ALTA DE PRODUCTOS CON BUSCADOR POR SKU O NOMBRE -->
+    <section id="tab-productos" class="tab-content">
+      <div class="header-panel">
+        <h2>Gestión y Creación de Productos</h2>
+      </div>
+      
+      <div class="card">
+        <form id="formNuevoProducto" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; align-items: end;">
+          
+          <!-- BUSCADOR / INGRESO DE SKU O NOMBRE -->
+          <div class="autocomplete-wrapper">
+            <label>Buscar por SKU o Nombre / Asignar SKU</label><br>
+            <input type="text" id="prodSku" placeholder="Escribe SKU o nombre para buscar..." style="width: 100%;" autocomplete="off" oninput="buscarProductoLive(this.value)">
+            <div id="sugProd" class="suggestions-box"></div>
+          </div>
+
+          <!-- SELECTOR DE TIPO -->
+          <div>
+            <label>Tipo de Producto</label><br>
+            <select id="prodTipo" style="width: 100%;" onchange="toggleSelectorPadreAlta(this.value)">
+              <option value="COMPONENTE">Componente / Insumo (Materia Prima)</option>
+              <option value="PADRE">Producto Padre (Kit / Ensamblado)</option>
+            </select>
+          </div>
+
+          <div style="grid-column: span 2;">
+            <label>Nombre / Descripción Corta</label><br>
+            <input type="text" id="prodNombre" placeholder="Ej: Etiqueta Adhesiva Happy Cake / Caja de Limón" style="width: 100%;">
+          </div>
+
+          <div id="wrapperAltaUnidad">
+            <label>Unidad de Medida</label><br>
+            <input type="text" id="prodUnidad" placeholder="Ej: PZA, KG, LTS, MTR" style="width: 100%;" value="PZA">
+          </div>
+
+          <!-- SELECTOR DE PRODUCTO PADRE -->
+          <div id="wrapperAltaPadre" class="autocomplete-wrapper">
+            <label>Producto Padre Pertenece (Busca SKU o Nombre)</label><br>
+            <input type="text" id="prodPadreAsignado" placeholder="Escribe SKU o nombre del Padre..." style="width: 100%;" autocomplete="off" oninput="buscarPadreLiveAlta(this.value)">
+            <input type="hidden" id="prodPadreSkuSelected">
+            <div id="sugAltaPadre" class="suggestions-box"></div>
+          </div>
+
+          <div style="grid-column: span 2; text-align: right;">
+            <button type="button" class="btn btn-success" onclick="guardarProducto()">Guardar / Registrar Producto</button>
+          </div>
+        </form>
+
+        <!-- PANEL DE PRUEBA Y DIAGNÓSTICO AJAX -->
+        <div style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
+          <h4 style="color: var(--accent);">🛠️ Panel de Diagnóstico AJAX (Búsqueda por SKU o Nombre)</h4>
+          <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px;">Escribe un SKU o Nombre para realizar la prueba en vivo:</p>
+          
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="testQuery" placeholder="Escribe SKU o Nombre..." style="flex: 1;" oninput="probarBusquedaAjaxDirecta(this.value)">
+            <button type="button" class="btn btn-secondary" onclick="probarBusquedaAjaxDirecta(document.getElementById('testQuery').value)">Probar Consulta AJAX</button>
+          </div>
+
+          <div id="debugLog" class="debug-box">Esperando prueba... Haz clic o escribe para escanear la base de datos.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB: COMPRAS Y ENTRADAS -->
+    <section id="tab-compras" class="tab-content">
+      <div class="header-panel">
+        <h2>Registro de Compras / Entradas de Insumos</h2>
+      </div>
+      <div class="card">
+        <form id="formEntradas" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 10px; align-items: end;">
+          
+          <div class="autocomplete-wrapper">
+            <label>Componente (Busca SKU o Nombre)</label><br>
+            <input type="text" id="inSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarInsumoLive(this.value, 'sugIn', 'inSku')">
+            <div id="sugIn" class="suggestions-box"></div>
+          </div>
+
+          <div>
+            <label>Cantidad Entrada</label><br>
+            <input type="number" step="0.0001" id="inCantidad" placeholder="0.00" style="width: 100%;" required>
+          </div>
+
+          <div>
+            <label>Documento / Referencia</label><br>
+            <input type="text" id="inDoc" placeholder="N° OC / Factura" style="width: 100%;" required>
+          </div>
+
+          <button type="button" class="btn btn-success" onclick="registrarMovimientoDirecto('COMPRA')">Registrar Entrada</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB: VENTAS Y SALIDAS DIRECTAS -->
+    <section id="tab-ventas" class="tab-content">
+      <div class="header-panel">
+        <h2>Registro de Ventas y Salidas Directas</h2>
+      </div>
+      <div class="card">
+        <form id="formSalidas" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 10px; align-items: end;">
+          
+          <div class="autocomplete-wrapper">
+            <label>Componente (Busca SKU o Nombre)</label><br>
+            <input type="text" id="outSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarInsumoLive(this.value, 'sugOut', 'outSku')">
+            <div id="sugOut" class="suggestions-box"></div>
+          </div>
+
+          <div>
+            <label>Cantidad Salida / Venta</label><br>
+            <input type="number" step="0.0001" id="outCantidad" placeholder="0.00" style="width: 100%;" required>
+          </div>
+
+          <div>
+            <label>Documento / Referencia</label><br>
+            <input type="text" id="outDoc" placeholder="N° Nota / Remisión" style="width: 100%;" required>
+          </div>
+
+          <button type="button" class="btn btn-danger" onclick="registrarMovimientoDirecto('VENTA')">Registrar Salida</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB: ÓRDEN DE PRODUCCIÓN -->
+    <section id="tab-produccion" class="tab-content">
+      <div class="header-panel">
+        <h2>Órdenes de Producción</h2>
+        <button class="btn" onclick="abrirModalOF()">+ Crear Orden</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>SKU Padre</th>
+              <th>Cantidad a Fabricar</th>
+              <th>Estado</th>
+              <th>Fecha Creación</th>
+            </tr>
+          </thead>
+          <tbody id="tablaOrdenes">
+            <tr><td colspan="5" style="text-align:center;">Cargando órdenes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB: SURTIDO DE ALMACÉN -->
+    <section id="tab-surtido" class="tab-content">
+      <div class="header-panel">
+        <h2>Surtido y Despacho de Componentes</h2>
+      </div>
+      <div class="card">
+        <h3>Lista de Requerimientos de Insumos para Producción</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>OF Ref.</th>
+              <th>SKU Componente</th>
+              <th>Requerido</th>
+              <th>Surtido</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tablaSurtido">
+            <tr><td colspan="6" style="text-align:center;">Cargando requerimientos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: CREAR ORDEN DE PRODUCCIÓN -->
+  <div id="modalNuevaOF" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Crear Nueva Orden de Producción</h3>
+        <button onclick="cerrarModalOF()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        
+        <div class="autocomplete-wrapper">
+          <label>Producto Padre (Busca por SKU o Nombre):</label><br>
+          <input type="text" id="ofPadreSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarPadreLive(this.value)">
+          <div id="sugOF" class="suggestions-box"></div>
+        </div>
+
+        <div>
+          <label>Cantidad a Fabricar:</label><br>
+          <input type="number" id="ofCantidad" placeholder="100" style="width: 100%;">
+        </div>
+        <button class="btn" onclick="guardarOrdenProduccion()">Generar Orden y Surtido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDICIÓN DE PRODUCTO / COMPONENTE -->
+  <div id="modalEditarProducto" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ Edición Integral de Producto / Componente</h3>
+        <button onclick="cerrarModalEdicion()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <form style="display: flex; flex-direction: column; gap: 15px;">
+        <input type="hidden" id="editTipoOriginal">
+
+        <div>
+          <label>SKU (Identificador)</label><br>
+          <input type="text" id="editSku" style="width: 100%; background-color: #f1f5f9;" readonly>
+        </div>
+
+        <div>
+          <label>Tipo de Producto</label><br>
+          <select id="editTipoNuevo" style="width: 100%;" onchange="toggleCamposEdicion(this.value)">
+            <option value="COMPONENTE">Componente / Insumo (Materia Prima)</option>
+            <option value="PADRE">Producto Padre (Kit / Ensamblado)</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Nombre / Descripción</label><br>
+          <input type="text" id="editNombre" style="width: 100%;" required>
+        </div>
+
+        <div id="wrapperEditUnidad">
+          <label>Unidad de Medida</label><br>
+          <input type="text" id="editUnidad" style="width: 100%;" placeholder="Ej: PZA, KG, LTS">
+        </div>
+
+        <div id="wrapperEditStock" style="background: #f8fafc; padding: 12px; border: 1px dashed var(--border); border-radius: 6px;">
+          <label style="font-weight: bold; color: var(--accent);">📦 Ajuste / Edición de Piezas en Stock</label><br>
+          <small style="color: #64748b; display: block; margin-bottom: 8px;">Establece la cantidad total real existente en inventario:</small>
+          <input type="number" step="0.0001" id="editCantidadPiezas" style="width: 100%;" placeholder="0.00">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="cerrarModalEdicion()">Cancelar</button>
+          <button type="button" class="btn btn-success" onclick="guardarEdicionProducto()">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 1. INICIALIZACIÓN GLOBAL Y CONEXIÓN ROBUSTA A SUPABASE
+    const SUPABASE_URL = 'https://bnboomdfjbyhypffxfnx.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJuYm9vbWRmamJ5aHlwZmZ4Zm54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTM4NjcsImV4cCI6MjEwMTM2OTg2N30.l8_ko574YuQ2FTxxNDPc1trCkRpMNmPTCe0wbdnS1nc';
+
+    let supabaseClient = null;
+
+    function getClient() {
+      if (window.supabaseClient) return window.supabaseClient;
+      if (window.db) return window.db;
+      if (window._supabase) return window._supabase;
+      
+      if (!supabaseClient && typeof supabase !== 'undefined') {
+        if (SUPABASE_URL !== 'TU_SUPABASE_URL_AQUÍ' && SUPABASE_KEY !== 'TU_SUPABASE_ANON_KEY_AQUÍ') {
+          supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          window.supabaseClient = supabaseClient;
+        }
+      }
+      return supabaseClient || window.supabaseClient;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('filtroFecha').value = new Date().toISOString().split('T')[0];
+      
+      if (getClient()) {
+        cargarStockAFecha();
+        cargarCatalogoCompleto();
+        cargarOrdenesProduccion();
+        cargarSurtidoAlmacen();
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+          document.querySelectorAll('.suggestions-box').forEach(box => box.style.display = 'none');
+        }
+      });
+    });
+
+    // 2. NAVEGACIÓN
+    function showTab(tabId, element) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      if(element) element.classList.add('active');
+    }
+
+    // 3. CONSULTA DIRECTA: CATÁLOGO DE PRODUCTOS Y COMPONENTES
+    async function cargarCatalogoCompleto() {
+      const client = getClient();
+      if (!client) return;
+
+      const stInsumos = document.getElementById('statusInsumos');
+      const stPadres = document.getElementById('statusPadres');
+      const tbInsumos = document.getElementById('tablaCatInsumos');
+      const tbPadres = document.getElementById('tablaCatPadres');
+
+      const { data: insumos, error: errInsumos } = await client.from('inventario_componentes').select('*').limit(100);
+      if (errInsumos) {
+        stInsumos.textContent = "Error RLS / Red";
+        stInsumos.className = "status-badge err";
+        tbInsumos.innerHTML = `<tr><td colspan="3" style="color:red;">Error: ${errInsumos.message}</td></tr>`;
+      } else {
+        stInsumos.textContent = `OK (${insumos.length} registros)`;
+        stInsumos.className = "status-badge ok";
+        tbInsumos.innerHTML = insumos.length === 0 ? '<tr><td colspan="3" style="text-align:center;">La tabla está vacía.</td></tr>' : '';
+        insumos.forEach(i => {
+          tbInsumos.innerHTML += `<tr><td><strong>${i.sku}</strong></td><td>${i.nombre}</td><td>${i.unidad_medida || 'PZA'}</td></tr>`;
+        });
+      }
+
+      const { data: padres, error: errPadres } = await client.from('productos_padre').select('*').limit(100);
+      if (errPadres) {
+        stPadres.textContent = "Error RLS / Red";
+        stPadres.className = "status-badge err";
+        tbPadres.innerHTML = `<tr><td colspan="2" style="color:red;">Error: ${errPadres.message}</td></tr>`;
+      } else {
+        stPadres.textContent = `OK (${padres.length} registros)`;
+        stPadres.className = "status-badge ok";
+        tbPadres.innerHTML = padres.length === 0 ? '<tr><td colspan="2" style="text-align:center;">La tabla está vacía.</td></tr>' : '';
+        padres.forEach(p => {
+          tbPadres.innerHTML += `<tr><td><strong>${p.sku}</strong></td><td>${p.nombre}</td></tr>`;
+        });
+      }
+    }
+
+    // 4. BÚSQUEDAS AJAX DUALES (SKU O NOMBRE MULTI-TABLA)
+    function toggleSelectorPadreAlta(tipo) {
+      const wrapperPadre = document.getElementById('wrapperAltaPadre');
+      const wrapperUnidad = document.getElementById('wrapperAltaUnidad');
+      
+      if (tipo === 'COMPONENTE') {
+        wrapperPadre.style.display = 'block';
+        wrapperUnidad.style.display = 'block';
+      } else {
+        wrapperPadre.style.display = 'none';
+        wrapperUnidad.style.display = 'none';
+        document.getElementById('prodPadreAsignado').value = '';
+        document.getElementById('prodPadreSkuSelected').value = '';
+      }
+    }
+
+    async function buscarPadreLiveAlta(val) {
+      const client = getClient();
+      if (!client) return;
+
+      const box = document.getElementById('sugAltaPadre');
+      const busqueda = val ? val.trim() : '';
+
+      if (busqueda.length < 2) { box.style.display = 'none'; return; }
+
+      const { data, error } = await client
+        .from('productos_padre')
+        .select('sku, nombre')
+        .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+        .limit(5);
+
+      if (error) return;
+
+      box.innerHTML = '';
+      if (data && data.length > 0) {
+        box.style.display = 'block';
+        data.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre}`;
+          div.onclick = () => {
+            document.getElementById('prodPadreAsignado').value = `${item.sku} - ${item.nombre}`;
+            document.getElementById('prodPadreSkuSelected').value = item.sku;
+            box.style.display = 'none';
+          };
+          box.appendChild(div);
+        });
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    // Búsqueda en Vivo Multi-tabla (inventario_componentes, productos_padre, componentes_bom)
+    async function buscarProductoLive(val) {
+      const client = getClient();
+      const box = document.getElementById('sugProd');
+      const busqueda = val ? val.trim() : '';
+      const logBox = document.getElementById('debugLog');
+
+      if (busqueda.length < 2) { 
+        if (box) box.style.display = 'none'; 
+        return; 
+      }
+
+      if (logBox) logBox.textContent = `⏳ Buscando en tiempo real: "${busqueda}"...`;
+
+      if (!client) {
+        if (logBox) logBox.textContent = `❌ Error: No hay conexión con Supabase. Ingresa tus credenciales en SUPABASE_URL y SUPABASE_KEY.`;
+        return;
+      }
+
+      try {
+        const [resComp, resPadre, resBom] = await Promise.all([
+          client
+            .from('inventario_componentes')
+            .select('sku, nombre, unidad_medida, movimientos_inventario(cantidad)')
+            .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+            .limit(5),
+          client
+            .from('productos_padre')
+            .select('sku, nombre')
+            .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+            .limit(5),
+          client
+            .from('componentes_bom')
+            .select('componente_sku, padre_sku')
+            .or(`componente_sku.ilike.%${busqueda}%,padre_sku.ilike.%${busqueda}%`)
+            .limit(5)
+        ]);
+
+        if (resComp.error || resPadre.error || resBom.error) {
+          const errMsj = resComp.error?.message || resPadre.error?.message || resBom.error?.message;
+          if (logBox) logBox.textContent = `❌ Error de consulta en Supabase: ${errMsj}`;
+          return;
+        }
+
+        const componentes = (resComp.data || []).map(item => {
+          const stock = (item.movimientos_inventario || []).reduce((acc, m) => acc + Number(m.cantidad), 0);
+          return { sku: item.sku, nombre: item.nombre || 'Componente/Insumo', unidad_medida: item.unidad_medida, stockActual: stock, origenTipo: 'COMPONENTE' };
+        });
+
+        const padres = (resPadre.data || []).map(item => ({ sku: item.sku, nombre: item.nombre, stockActual: 0, origenTipo: 'PADRE' }));
+
+        const boms = (resBom.data || []).map(item => ({
+          sku: item.componente_sku,
+          nombre: `Insumo asociado al Padre: ${item.padre_sku}`,
+          stockActual: 0,
+          origenTipo: 'COMPONENTE'
+        }));
+
+        const unificados = [...componentes, ...padres, ...boms];
+        const resultados = Array.from(new Map(unificados.map(item => [item.sku, item])).values());
+
+        if (logBox) {
+          logBox.textContent = `✅ Búsqueda exitosa (${resultados.length} coincidencias):\n` + JSON.stringify(resultados, null, 2);
+        }
+
+        if (!box) return;
+        box.innerHTML = '';
+
+        if (resultados.length > 0) {
+          box.style.display = 'block';
+          resultados.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            
+            const etiquetaTipo = item.origenTipo === 'COMPONENTE' ? '[Componente / BOM]' : '[Producto Padre]';
+            div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre} <small style="color:#2563eb; font-weight:bold;">${etiquetaTipo} ✏️ Editar</small>`;
+            
+            div.onclick = () => {
+              document.getElementById('prodSku').value = item.sku;
+              document.getElementById('prodNombre').value = item.nombre;
+              box.style.display = 'none';
+              abrirModalEdicion(item);
+            };
+            
+            box.appendChild(div);
+          });
+        } else {
+          box.style.display = 'none';
+        }
+      } catch (err) {
+        if (logBox) logBox.textContent = `💥 Error JS inesperado: ${err.message}`;
+      }
+    }
+
+    async function buscarInsumoLive(val, boxId, inputId) {
+      const client = getClient();
+      if (!client) return;
+
+      const box = document.getElementById(boxId);
+      const busqueda = val ? val.trim() : '';
+
+      if (busqueda.length < 2) { box.style.display = 'none'; return; }
+
+      const { data, error } = await client
+        .from('inventario_componentes')
+        .select('sku, nombre')
+        .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+        .limit(5);
+
+      if (error) return;
+
+      box.innerHTML = '';
+      if (data && data.length > 0) {
+        box.style.display = 'block';
+        data.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre}`;
+          div.onclick = () => {
+            document.getElementById(inputId).value = item.sku;
+            box.style.display = 'none';
+          };
+          box.appendChild(div);
+        });
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    async function buscarPadreLive(val) {
+      const client = getClient();
+      if (!client) return;
+
+      const box = document.getElementById('sugOF');
+      const busqueda = val ? val.trim() : '';
+
+      if (busqueda.length < 2) { box.style.display = 'none'; return; }
+
+      const { data, error } = await client
+        .from('productos_padre')
+        .select('sku, nombre')
+        .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+        .limit(5);
+
+      if (error) return;
+
+      box.innerHTML = '';
+      if (data && data.length > 0) {
+        box.style.display = 'block';
+        data.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre}`;
+          div.onclick = () => {
+            document.getElementById('ofPadreSku').value = item.sku;
+            box.style.display = 'none';
+          };
+          box.appendChild(div);
+        });
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    // MODAL Y LÓGICA DE EDICIÓN
+    function abrirModalEdicion(producto) {
+      document.getElementById('editTipoOriginal').value = producto.origenTipo;
+      document.getElementById('editTipoNuevo').value = producto.origenTipo;
+      document.getElementById('editSku').value = producto.sku;
+      document.getElementById('editNombre').value = producto.nombre || '';
+      document.getElementById('editUnidad').value = producto.unidad_medida || 'PZA';
+      document.getElementById('editCantidadPiezas').value = producto.stockActual || 0;
+
+      toggleCamposEdicion(producto.origenTipo);
+      document.getElementById('modalEditarProducto').style.display = 'flex';
+    }
+
+    function toggleCamposEdicion(tipo) {
+      const wrapperUnidad = document.getElementById('wrapperEditUnidad');
+      const wrapperStock = document.getElementById('wrapperEditStock');
+
+      if (tipo === 'COMPONENTE') {
+        wrapperUnidad.style.display = 'block';
+        wrapperStock.style.display = 'block';
+      } else {
+        wrapperUnidad.style.display = 'none';
+        wrapperStock.style.display = 'none';
+      }
+    }
+
+    function cerrarModalEdicion() {
+      document.getElementById('modalEditarProducto').style.display = 'none';
+    }
+
+    async function guardarEdicionProducto() {
+      const client = getClient();
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
+
+      const sku = document.getElementById('editSku').value;
+      const tipoOriginal = document.getElementById('editTipoOriginal').value;
+      const tipoNuevo = document.getElementById('editTipoNuevo').value;
+      const nombre = document.getElementById('editNombre').value.trim();
+      const unidad = document.getElementById('editUnidad').value.trim();
+      const nuevaCantidad = parseFloat(document.getElementById('editCantidadPiezas').value) || 0;
+
+      if (!nombre) return alert('El nombre es obligatorio.');
+
+      if (tipoOriginal !== tipoNuevo) {
+        if (tipoOriginal === 'COMPONENTE' && tipoNuevo === 'PADRE') {
+          await client.from('inventario_componentes').delete().eq('sku', sku);
+          const { error } = await client.from('productos_padre').insert([{ sku: sku, nombre: nombre }]);
+          if (error) return alert("Error al migrar a Producto Padre: " + error.message);
+        } else if (tipoOriginal === 'PADRE' && tipoNuevo === 'COMPONENTE') {
+          await client.from('productos_padre').delete().eq('sku', sku);
+          const { error } = await client.from('inventario_componentes').insert([{ sku: sku, nombre: nombre, unidad_medida: unidad }]);
+          if (error) return alert("Error al migrar a Componente: " + error.message);
+        }
+      } else {
+        if (tipoNuevo === 'COMPONENTE') {
+          const { error } = await client
+            .from('inventario_componentes')
+            .update({ nombre: nombre, unidad_medida: unidad })
+            .eq('sku', sku);
+          if (error) return alert("Error al actualizar componente: " + error.message);
+        } else {
+          const { error } = await client
+            .from('productos_padre')
+            .update({ nombre: nombre })
+            .eq('sku', sku);
+          if (error) return alert("Error al actualizar producto padre: " + error.message);
+        }
+      }
+
+      if (tipoNuevo === 'COMPONENTE') {
+        const { data: movs } = await client
+          .from('movimientos_inventario')
+          .select('cantidad')
+          .eq('componente_sku', sku);
+
+        const stockActual = (movs || []).reduce((acc, m) => acc + Number(m.cantidad), 0);
+        const diferencia = nuevaCantidad - stockActual;
+
+        if (diferencia !== 0) {
+          await client.from('movimientos_inventario').insert([{
+            componente_sku: sku,
+            tipo_movimiento: 'AJUSTE_INVENTARIO',
+            cantidad: diferencia,
+            referencia_doc: 'Ajuste desde Edición',
+            fecha_movimiento: new Date().toISOString()
+          }]);
+        }
+      }
+
+      alert("Producto y stock actualizados correctamente.");
+      cerrarModalEdicion();
+      document.getElementById('prodSku').value = '';
+      cargarCatalogoCompleto();
+      cargarStockAFecha();
+    }
+
+    // DIAGNÓSTICO EN TIEMPO REAL MULTI-TABLA
+    async function probarBusquedaAjaxDirecta(valor) {
+      const client = getClient();
+      const logBox = document.getElementById('debugLog');
+
+      if (!client) {
+        logBox.textContent = "❌ Error: El cliente de Supabase no está inicializado. Revisa SUPABASE_URL y SUPABASE_KEY.";
+        return;
+      }
+
+      const query = (valor !== undefined ? valor : document.getElementById('testQuery').value).trim();
+
+      if (!query || query.length < 2) {
+        logBox.textContent = "Esperando entrada (mínimo 2 caracteres)...";
+        return;
+      }
+
+      logBox.textContent = `⏳ Ejecutando consulta AJAX a Supabase para: "${query}"...\n`;
+
+      try {
+        const [resComp, resPadre, resBom] = await Promise.all([
+          client
+            .from('inventario_componentes')
+            .select('sku, nombre, unidad_medida')
+            .or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`)
+            .limit(10),
+          client
+            .from('productos_padre')
+            .select('sku, nombre')
+            .or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`)
+            .limit(10),
+          client
+            .from('componentes_bom')
+            .select('componente_sku, padre_sku')
+            .or(`componente_sku.ilike.%${query}%,padre_sku.ilike.%${query}%`)
+            .limit(10)
+        ]);
+
+        let logText = `🔎 RESULTADOS EN TIEMPO REAL PARA: "${query}"\n\n`;
+
+        if (resComp.error) {
+          logText += `❌ Error en inventario_componentes: ${resComp.error.message}\n`;
+        } else {
+          logText += `📦 Tabla 'inventario_componentes' (${resComp.data.length}):\n`;
+          logText += JSON.stringify(resComp.data, null, 2) + "\n\n";
+        }
+
+        if (resPadre.error) {
+          logText += `❌ Error en productos_padre: ${resPadre.error.message}\n`;
+        } else {
+          logText += `👑 Tabla 'productos_padre' (${resPadre.data.length}):\n`;
+          logText += JSON.stringify(resPadre.data, null, 2) + "\n\n";
+        }
+
+        if (resBom.error) {
+          logText += `❌ Error en componentes_bom: ${resBom.error.message}\n`;
+        } else {
+          logText += `🧩 Tabla 'componentes_bom' (${resBom.data.length}):\n`;
+          logText += JSON.stringify(resBom.data, null, 2) + "\n";
+        }
+
+        logBox.textContent = logText;
+      } catch (err) {
+        logBox.textContent = `💥 Excepción inesperada: ${err.message}`;
+      }
+    }
+
+    // 5. GUARDAR NUEVO PRODUCTO Y RELACIÓN CON PADRE
+    async function guardarProducto() {
+      const client = getClient();
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
+
+      const tipo = document.getElementById('prodTipo').value;
+      const sku = document.getElementById('prodSku').value.trim();
+      const nombre = document.getElementById('prodNombre').value.trim();
+      const unidad = document.getElementById('prodUnidad').value.trim();
+      const padreSku = document.getElementById('prodPadreSkuSelected').value.trim();
+
+      if (!sku || !nombre) {
+        return alert('Por favor ingresa SKU y Nombre del producto.');
+      }
+
+      if (tipo === 'COMPONENTE') {
+        const { error: errComp } = await client
+          .from('inventario_componentes')
+          .upsert([{ sku: sku, nombre: nombre, unidad_medida: unidad }], { onConflict: 'sku' });
+
+        if (errComp) return alert("Error al guardar componente: " + errComp.message);
+
+        if (padreSku) {
+          const { error: errBom } = await client
+            .from('componentes_bom')
+            .upsert([{ padre_sku: padreSku, componente_sku: sku, cantidad: 1 }]);
+
+          if (errBom) console.error("Error vinculando a BOM Padre:", errBom.message);
+        }
+      } else {
+        const { error } = await client
+          .from('productos_padre')
+          .upsert([{ sku: sku, nombre: nombre }], { onConflict: 'sku' });
+
+        if (error) return alert("Error al guardar producto padre: " + error.message);
+      }
+
+      alert("Producto guardado correctamente.");
+      document.getElementById('formNuevoProducto').reset();
+      document.getElementById('prodPadreSkuSelected').value = '';
+      cargarStockAFecha();
+      cargarCatalogoCompleto();
+    }
+
+    // 6. CONTROL DE INVENTARIO A LA FECHA (KARDEX)
+    async function cargarStockAFecha() {
+      const client = getClient();
+      if (!client) return;
+
+      const fechaSeleccionada = document.getElementById('filtroFecha').value || new Date().toISOString().split('T')[0];
+      const fechaCorte = `${fechaSeleccionada}T23:59:59`;
+
+      const { data, error } = await client
+        .from('inventario_componentes')
+        .select(`
+          sku,
+          nombre,
+          unidad_medida,
+          movimientos_inventario ( cantidad, fecha_movimiento )
+        `);
+
+      if (error) return console.error("Error al cargar inventario:", error.message);
+
+      const tbody = document.getElementById('tablaKardex');
+      tbody.innerHTML = '';
+
+      if(!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay componentes registrados en el catálogo.</td></tr>';
+        return;
+      }
+
+      data.forEach(item => {
+        const stockAcumulado = (item.movimientos_inventario || [])
+          .filter(m => m.fecha_movimiento <= fechaCorte)
+          .reduce((acc, curr) => acc + Number(curr.cantidad), 0);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${item.sku}</strong></td>
+          <td>${item.nombre}</td>
+          <td>${item.unidad_medida || 'PZA'}</td>
+          <td><strong>${stockAcumulado.toLocaleString()}</strong></td>
+          <td>
+            <span style="color: ${stockAcumulado > 0 ? 'green' : 'red'}; font-weight: bold;">
+              ● ${stockAcumulado > 0 ? 'Disponible' : 'Sin Stock'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 7. ENTRADAS / SALIDAS DIRECTAS
+    async function registrarMovimientoDirecto(tipo) {
+      const client = getClient();
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
+
+      const isCompra = tipo === 'COMPRA';
+      const sku = document.getElementById(isCompra ? 'inSku' : 'outSku').value;
+      let cantidad = parseFloat(document.getElementById(isCompra ? 'inCantidad' : 'outCantidad').value);
+      const doc = document.getElementById(isCompra ? 'inDoc' : 'outDoc').value;
+
+      if (!sku || isNaN(cantidad) || cantidad <= 0) {
+        return alert('Por favor completa todos los campos.');
+      }
+
+      if (!isCompra) cantidad = -Math.abs(cantidad);
+
+      const { error } = await client
+        .from('movimientos_inventario')
+        .insert([{
+          componente_sku: sku,
+          tipo_movimiento: tipo,
+          cantidad: cantidad,
+          referencia_doc: doc,
+          fecha_movimiento: new Date().toISOString()
+        }]);
+
+      if (error) {
+        alert("Error al registrar: " + error.message);
+      } else {
+        alert("Movimiento registrado con éxito.");
+        document.getElementById(isCompra ? 'formEntradas' : 'formSalidas').reset();
+        cargarStockAFecha();
+      }
+    }
+
+    // 8. ÓRDENES DE PRODUCCIÓN Y SURTIDO
+    function abrirModalOF() { document.getElementById('modalNuevaOF').style.display = 'flex'; }
+    function cerrarModalOF() { document.getElementById('modalNuevaOF').style.display = 'none'; }
+
+    async function guardarOrdenProduccion() {
+      const client = getClient();
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
+
+      const padreSku = document.getElementById('ofPadreSku').value;
+      const cantidad = parseFloat(document.getElementById('ofCantidad').value);
+
+      if(!padreSku || isNaN(cantidad) || cantidad <= 0) {
+        return alert('Ingresa un SKU de producto padre y una cantidad válida.');
+      }
+
+      const { data: orden, error: errOrden } = await client
+        .from('ordenes_produccion')
+        .insert([{ padre_sku: padreSku, cantidad_a_fabricar: cantidad, estado: 'PLANIFICADA' }])
+        .select()
+        .single();
+
+      if (errOrden) return alert("Error al crear la orden: " + errOrden.message);
+
+      const { data: bom, error: errBom } = await client
+        .from('componentes_bom')
+        .select('componente_sku, cantidad')
+        .eq('padre_sku', padreSku);
+
+      if (errBom) {
+        console.error("Error al consultar componentes_bom:", errBom.message);
+      } else if (bom && bom.length > 0) {
+        const listaSurtido = bom.map(item => ({
+          orden_folio: orden.folio,
+          componente_sku: item.componente_sku,
+          cantidad_requerida: item.cantidad * cantidad,
+          cantidad_surtida: 0,
+          estado_surtido: 'PENDIENTE'
+        }));
+
+        await client.from('surtido_almacen').insert(listaSurtido);
+      } else {
+        alert("Atención: El producto padre no tiene componentes asociados en componentes_bom.");
+      }
+
+      cerrarModalOF();
+      cargarOrdenesProduccion();
+      cargarSurtidoAlmacen();
+    }
+
+    async function cargarOrdenesProduccion() {
+      const client = getClient();
+      if (!client) return;
+
+      const { data, error } = await client
+        .from('ordenes_produccion')
+        .select('*')
+        .order('folio', { ascending: false });
+
+      if (error) return;
+
+      const tbody = document.getElementById('tablaOrdenes');
+      tbody.innerHTML = '';
+
+      data.forEach(of => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>OF-${of.folio}</strong></td>
+          <td>${of.padre_sku}</td>
+          <td>${of.cantidad_a_fabricar}</td>
+          <td><span style="color: var(--warning); font-weight:bold;">${of.estado}</span></td>
+          <td>${new Date(of.fecha_creacion).toLocaleDateString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function cargarSurtidoAlmacen() {
+      const client = getClient();
+      if (!client) return;
+
+      const { data, error } = await client
+        .from('surtido_almacen')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) return;
+
+      const tbody = document.getElementById('tablaSurtido');
+      tbody.innerHTML = '';
+
+      data.forEach(s => {
+        const tr = document.createElement('tr');
+        const esPendiente = s.estado_surtido === 'PENDIENTE';
+        tr.innerHTML = `
+          <td>OF-${s.orden_folio}</td>
+          <td><strong>${s.componente_sku}</strong></td>
+          <td>${s.cantidad_requerida}</td>
+          <td>${s.cantidad_surtida}</td>
+          <td><span style="color: ${esPendiente ? 'red' : 'green'}; font-weight:bold;">${s.estado_surtido}</span></td>
+          <td>
+            ${esPendiente 
+              ? `<button class="btn btn-success" style="padding:4px 8px; font-size:0.8rem;" onclick="despacharSurtido(${s.id}, '${s.componente_sku}', ${s.cantidad_requerida}, ${s.orden_folio})">Despachar</button>` 
+              : 'Surtido'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function despacharSurtido(surtidoId, sku, cantidad, folio) {
+      const client = getClient();
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
+
+      const { error: errMov } = await client
+        .from('movimientos_inventario')
+        .insert([{
+          componente_sku: sku,
+          tipo_movimiento: 'CONSUMO_PRODUCCION',
+          cantidad: -Math.abs(cantidad),
+          referencia_doc: `OF-${folio}`,
+          fecha_movimiento: new Date().toISOString()
+        }]);
+
+      if (errMov) return alert("Error al entregar insumo: " + errMov.message);
+
+      await client
+        .from('surtido_almacen')
+        .update({ cantidad_surtida: cantidad, estado_surtido: 'COMPLETO' })
+        .eq('id', surtidoId);
+
+      alert("Insumo entregado a producción y stock descontado.");
+      cargarStockAFecha();
+      cargarSurtidoAlmacen();
+    }
+  </script>
+</body>
+</html>
