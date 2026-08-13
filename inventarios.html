@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HARES DE MÉXICO - Control de Inventarios y Producción</title>
   
-  <!-- SDK de Supabase -->
+  <!-- SDK de Supabase cargado en el head -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -49,32 +49,8 @@
 
     /* Tables */
     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-    th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; vertical-align: middle; }
+    th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
     th { background-color: #f1f5f9; font-weight: 600; }
-
-    /* Layout Horizontal de Componentes (En Frente) */
-    .grid-componentes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .badge-componente {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background-color: #f1f5f9;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 0.82rem;
-      white-space: nowrap;
-    }
-
-    .badge-componente strong {
-      color: var(--accent);
-    }
 
     /* UI Controls */
     .btn { background-color: var(--accent); color: white; border: none; padding: 9px 16px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.2s; }
@@ -89,31 +65,59 @@
     .tab-content.active { display: block; }
 
     /* Autocomplete Dropdown UI */
-    .autocomplete-wrapper { position: relative; width: 100%; }
-    .suggestions-box {
-      position: absolute; top: 100%; left: 0; right: 0;
-      background: white; border: 1px solid var(--border); border-radius: 0 0 6px 6px;
-      max-height: 180px; overflow-y: auto; z-index: 1000;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: none;
+    .autocomplete-wrapper {
+      position: relative;
+      width: 100%;
     }
-    .suggestion-item { padding: 10px 12px; cursor: pointer; font-size: 0.88rem; border-bottom: 1px solid #f1f5f9; }
-    .suggestion-item:hover { background-color: #f1f5f9; color: var(--accent); font-weight: 600; }
+    .suggestions-box {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 0 0 6px 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .suggestion-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .suggestion-item:hover {
+      background-color: #f1f5f9;
+      color: var(--accent);
+      font-weight: 600;
+    }
 
-    /* Status Badge & Count Badge */
-    .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; display: inline-block; }
+    /* Status Badge */
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      display: inline-block;
+    }
     .status-badge.ok { background-color: #dcfce7; color: #15803d; }
     .status-badge.err { background-color: #fee2e2; color: #b91c1c; }
 
-    .badge-count {
-      background-color: #dbeafe; color: #1d4ed8; font-weight: bold;
-      border-radius: 50%; padding: 3px 9px; font-size: 0.82rem; display: inline-block;
-    }
-
     /* Debug Console Styling */
     .debug-box {
-      background: #0f172a; color: #38bdf8; font-family: monospace; padding: 12px;
-      border-radius: 6px; font-size: 0.82rem; margin-top: 15px; white-space: pre-wrap;
-      max-height: 200px; overflow-y: auto;
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
     }
 
     /* Modal Styles */
@@ -131,7 +135,7 @@
   <aside class="sidebar">
     <h1>HARES DE MÉXICO</h1>
     <button class="nav-btn active" onclick="showTab('tab-kardex', this)">📊 Stock / Control a Fecha</button>
-    <button class="nav-btn" onclick="showTab('tab-catalogo', this)">🔗 Relación Padres y Componentes</button>
+    <button class="nav-btn" onclick="showTab('tab-catalogo', this)">📚 Catálogo de Productos y Componentes</button>
     <button class="nav-btn" onclick="showTab('tab-productos', this)">➕ Alta de Productos</button>
     <button class="nav-btn" onclick="showTab('tab-compras', this)">🛒 Compras y Entradas</button>
     <button class="nav-btn" onclick="showTab('tab-ventas', this)">🏷️ Ventas y Salidas</button>
@@ -170,35 +174,43 @@
       </div>
     </section>
 
-    <!-- TAB: RELACIÓN GENERAL DE PRODUCTOS PADRES Y SUS COMPONENTES (HIJOS) -->
+    <!-- OPCIÓN MENÚ: CATÁLOGO DE PRODUCTOS Y COMPONENTES -->
     <section id="tab-catalogo" class="tab-content">
       <div class="header-panel">
-        <h2 style="display: flex; align-items: center; gap: 8px;">🔗 Relación General de Productos Padres y sus Componentes</h2>
-        <button class="btn btn-secondary" onclick="cargarRelacionPadresComponentes()">🔄 Actualizar Datos</button>
+        <h2>Catálogo de Productos y Componentes</h2>
+        <button class="btn btn-secondary" onclick="cargarCatalogoCompleto()">🔄 Actualizar Datos</button>
       </div>
 
       <div class="card">
-        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">
-          Este listado muestra del <strong>lado izquierdo los Productos Padres</strong> y de forma <strong>horizontal a la derecha sus Componentes/Insumos Hijos</strong> vinculados por la tabla <code>componentes_bom</code>.
-        </p>
-
-        <div style="margin-bottom: 15px;">
-          Estado Conexión: <span id="statusRelacion" class="status-badge">Verificando...</span>
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+          <div>Estado Conexión Insumos: <span id="statusInsumos" class="status-badge">Verificando...</span></div>
+          <div>Estado Conexión Padres: <span id="statusPadres" class="status-badge">Verificando...</span></div>
         </div>
 
+        <h3 style="margin-top: 10px;">Componentes e Insumos (Materia Prima)</h3>
         <table>
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center;">#</th>
-              <th style="width: 140px;">SKU Padre</th>
-              <th>Descripción del Padre</th>
-              <th style="width: 70px; text-align: center;">Total</th>
-              <th>Componentes / Insumos Hijos Asignados (BOM)</th>
-              <th style="width: 120px; text-align: center;">Acción</th>
+              <th>SKU Componente</th>
+              <th>Nombre / Descripción</th>
+              <th>Unidad de Medida</th>
             </tr>
           </thead>
-          <tbody id="tablaRelacionPadres">
-            <tr><td colspan="6" style="text-align:center;">Cargando relación de productos...</td></tr>
+          <tbody id="tablaCatInsumos">
+            <tr><td colspan="3" style="text-align:center;">Consultando Supabase...</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top: 25px;">Productos Padre (Kits / Ensambles)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU Padre</th>
+              <th>Nombre / Descripción</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCatPadres">
+            <tr><td colspan="2" style="text-align:center;">Consultando Supabase...</td></tr>
           </tbody>
         </table>
       </div>
@@ -212,12 +224,15 @@
       
       <div class="card">
         <form id="formNuevoProducto" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; align-items: end;">
+          
+          <!-- BUSCADOR / INGRESO DE SKU O NOMBRE -->
           <div class="autocomplete-wrapper">
             <label>Buscar por SKU o Nombre / Asignar SKU</label><br>
-            <input type="text" id="prodSku" placeholder="Escribe SKU (ej. C001, 5) o Nombre..." style="width: 100%;" autocomplete="off" oninput="buscarProductoLive(this.value)">
+            <input type="text" id="prodSku" placeholder="Escribe SKU o nombre para buscar..." style="width: 100%;" autocomplete="off" oninput="buscarProductoLive(this.value)">
             <div id="sugProd" class="suggestions-box"></div>
           </div>
 
+          <!-- SELECTOR DE TIPO -->
           <div>
             <label>Tipo de Producto</label><br>
             <select id="prodTipo" style="width: 100%;" onchange="toggleSelectorPadreAlta(this.value)">
@@ -236,6 +251,7 @@
             <input type="text" id="prodUnidad" placeholder="Ej: PZA, KG, LTS, MTR" style="width: 100%;" value="PZA">
           </div>
 
+          <!-- SELECTOR DE PRODUCTO PADRE -->
           <div id="wrapperAltaPadre" class="autocomplete-wrapper">
             <label>Producto Padre Pertenece (Busca SKU o Nombre)</label><br>
             <input type="text" id="prodPadreAsignado" placeholder="Escribe SKU o nombre del Padre..." style="width: 100%;" autocomplete="off" oninput="buscarPadreLiveAlta(this.value)">
@@ -248,8 +264,9 @@
           </div>
         </form>
 
+        <!-- PANEL DE PRUEBA Y DIAGNÓSTICO AJAX -->
         <div style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
-          <h4 style="color: var(--accent);">🛠️ Panel de Diagnóstico AJAX</h4>
+          <h4 style="color: var(--accent);">🛠️ Panel de Diagnóstico AJAX (Búsqueda por SKU o Nombre)</h4>
           <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px;">Escribe un SKU o Nombre para realizar la prueba en vivo:</p>
           
           <div style="display: flex; gap: 10px;">
@@ -259,6 +276,7 @@
 
           <div id="debugLog" class="debug-box">Esperando prueba... Haz clic o escribe para escanear la base de datos.</div>
         </div>
+
       </div>
     </section>
 
@@ -269,19 +287,23 @@
       </div>
       <div class="card">
         <form id="formEntradas" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 10px; align-items: end;">
+          
           <div class="autocomplete-wrapper">
             <label>Componente (Busca SKU o Nombre)</label><br>
             <input type="text" id="inSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarInsumoLive(this.value, 'sugIn', 'inSku')">
             <div id="sugIn" class="suggestions-box"></div>
           </div>
+
           <div>
             <label>Cantidad Entrada</label><br>
             <input type="number" step="0.0001" id="inCantidad" placeholder="0.00" style="width: 100%;" required>
           </div>
+
           <div>
             <label>Documento / Referencia</label><br>
             <input type="text" id="inDoc" placeholder="N° OC / Factura" style="width: 100%;" required>
           </div>
+
           <button type="button" class="btn btn-success" onclick="registrarMovimientoDirecto('COMPRA')">Registrar Entrada</button>
         </form>
       </div>
@@ -294,19 +316,23 @@
       </div>
       <div class="card">
         <form id="formSalidas" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 10px; align-items: end;">
+          
           <div class="autocomplete-wrapper">
             <label>Componente (Busca SKU o Nombre)</label><br>
             <input type="text" id="outSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarInsumoLive(this.value, 'sugOut', 'outSku')">
             <div id="sugOut" class="suggestions-box"></div>
           </div>
+
           <div>
             <label>Cantidad Salida / Venta</label><br>
             <input type="number" step="0.0001" id="outCantidad" placeholder="0.00" style="width: 100%;" required>
           </div>
+
           <div>
             <label>Documento / Referencia</label><br>
             <input type="text" id="outDoc" placeholder="N° Nota / Remisión" style="width: 100%;" required>
           </div>
+
           <button type="button" class="btn btn-danger" onclick="registrarMovimientoDirecto('VENTA')">Registrar Salida</button>
         </form>
       </div>
@@ -371,11 +397,13 @@
         <button onclick="cerrarModalOF()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 15px;">
+        
         <div class="autocomplete-wrapper">
           <label>Producto Padre (Busca por SKU o Nombre):</label><br>
           <input type="text" id="ofPadreSku" placeholder="Escribe SKU o nombre..." style="width: 100%;" autocomplete="off" oninput="buscarPadreLive(this.value)">
           <div id="sugOF" class="suggestions-box"></div>
         </div>
+
         <div>
           <label>Cantidad a Fabricar:</label><br>
           <input type="number" id="ofCantidad" placeholder="100" style="width: 100%;">
@@ -432,64 +460,25 @@
     </div>
   </div>
 
-  <!-- MODAL: EDITAR ESTRUCTURA BOM DEL PADRE -->
-  <div id="modalEditarBom" class="modal-overlay">
-    <div class="modal-content" style="max-width: 650px;">
-      <div class="modal-header">
-        <h3>🧩 Editar Estructura BOM - <span id="bomPadreTitulo" style="color: var(--accent);"></span></h3>
-        <button onclick="cerrarModalBom()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
-      </div>
-
-      <!-- Formulario para agregar nuevo componente a este Padre -->
-      <div style="background: #f8fafc; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 15px;">
-        <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--primary);">➕ Agregar Componente</h4>
-        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1fr auto; gap: 8px; align-items: center;">
-          <div class="autocomplete-wrapper">
-            <input type="text" id="bomNuevoComp" placeholder="SKU o Nombre Componente..." style="width: 100%;" autocomplete="off" oninput="buscarInsumoLive(this.value, 'sugBomComp', 'bomNuevoComp')">
-            <div id="sugBomComp" class="suggestions-box"></div>
-          </div>
-          <input type="text" id="bomNuevoNombre" placeholder="Nombre Componente" style="width: 100%;">
-          <input type="number" step="0.0001" id="bomNuevaCantidad" placeholder="Cant." style="width: 100%;">
-          <button type="button" class="btn btn-success" style="padding: 8px 12px;" onclick="agregarComponenteBomDirecto()">+ Añadir</button>
-        </div>
-      </div>
-
-      <!-- Lista de componentes vinculados a la receta/BOM -->
-      <table style="margin-top: 0;">
-        <thead>
-          <tr>
-            <th>SKU Componente</th>
-            <th>Nombre / Descripción</th>
-            <th style="width: 110px;">Cantidad</th>
-            <th style="width: 80px; text-align: center;">Acción</th>
-          </tr>
-        </thead>
-        <tbody id="tablaBomBody">
-          <tr><td colspan="4" style="text-align:center;">Cargando componentes...</td></tr>
-        </tbody>
-      </table>
-
-      <div style="text-align: right; margin-top: 15px;">
-        <button type="button" class="btn btn-secondary" onclick="cerrarModalBom()">Cerrar / Finalizar</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    // 1. INICIALIZACIÓN Y CONEXIÓN A SUPABASE
-    const SUPABASE_PROJECT_ID = 'bnboomdfjbyhypffxfnx';
-    const SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+    // 1. INICIALIZACIÓN GLOBAL Y CONEXIÓN ROBUSTA A SUPABASE
+    const SUPABASE_URL = 'https://bnboomdfjbyhypffxfnx.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJuYm9vbWRmamJ5aHlwZmZ4Zm54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTM4NjcsImV4cCI6MjEwMTM2OTg2N30.l8_ko574YuQ2FTxxNDPc1trCkRpMNmPTCe0wbdnS1nc';
 
     let supabaseClient = null;
-    let padreSkuActualBom = null;
 
     function getClient() {
+      if (window.supabaseClient) return window.supabaseClient;
+      if (window.db) return window.db;
+      if (window._supabase) return window._supabase;
+      
       if (!supabaseClient && typeof supabase !== 'undefined') {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        window.supabaseClient = supabaseClient;
+        if (SUPABASE_URL !== 'TU_SUPABASE_URL_AQUÍ' && SUPABASE_KEY !== 'TU_SUPABASE_ANON_KEY_AQUÍ') {
+          supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          window.supabaseClient = supabaseClient;
+        }
       }
-      return supabaseClient;
+      return supabaseClient || window.supabaseClient;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -497,7 +486,7 @@
       
       if (getClient()) {
         cargarStockAFecha();
-        cargarRelacionPadresComponentes();
+        cargarCatalogoCompleto();
         cargarOrdenesProduccion();
         cargarSurtidoAlmacen();
       }
@@ -518,209 +507,46 @@
       if(element) element.classList.add('active');
     }
 
-    // 3. CONSULTA Y VINCULACIÓN DE COMPONENTES A PADRES (USA ID, PADRE_SKU, COMPONENTE_SKU, COMPONENTE_NOMBRE, CANTIDAD)
-    async function cargarRelacionPadresComponentes() {
+    // 3. CONSULTA DIRECTA: CATÁLOGO DE PRODUCTOS Y COMPONENTES
+    async function cargarCatalogoCompleto() {
       const client = getClient();
       if (!client) return;
 
-      const stRelacion = document.getElementById('statusRelacion');
-      const tbody = document.getElementById('tablaRelacionPadres');
+      const stInsumos = document.getElementById('statusInsumos');
+      const stPadres = document.getElementById('statusPadres');
+      const tbInsumos = document.getElementById('tablaCatInsumos');
+      const tbPadres = document.getElementById('tablaCatPadres');
 
-      const [resPadres, resComp, resBom] = await Promise.all([
-        client.from('productos_padre').select('sku, nombre'),
-        client.from('inventario_componentes').select('sku, nombre, padre_sku'),
-        client.from('componentes_bom').select('id, padre_sku, componente_sku, componente_nombre, cantidad')
-      ]);
-
-      if (resPadres.error) {
-        stRelacion.textContent = "Error RLS / Consulta";
-        stRelacion.className = "status-badge err";
-        tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Error: ${resPadres.error.message}</td></tr>`;
-        return;
-      }
-
-      const padresMap = new Map();
-
-      // Mapear Productos Padres
-      (resPadres.data || []).forEach(p => {
-        const key = String(p.sku).trim();
-        padresMap.set(key, { sku: p.sku, nombre: p.nombre || 'Sin nombre', componentes: [] });
-      });
-
-      // Asociar desde componentes_bom
-      (resBom.data || []).forEach(bom => {
-        if (bom.padre_sku && String(bom.padre_sku).trim() !== '') {
-          const padreKey = String(bom.padre_sku).trim();
-          if (!padresMap.has(padreKey)) {
-            padresMap.set(padreKey, { sku: bom.padre_sku, nombre: 'Producto Padre No Registrado', componentes: [] });
-          }
-          const yaExiste = padresMap.get(padreKey).componentes.some(comp => String(comp.sku).trim() === String(bom.componente_sku).trim());
-          if (!yaExiste) {
-            padresMap.get(padreKey).componentes.push({
-              id: bom.id,
-              sku: bom.componente_sku,
-              nombre: bom.componente_nombre || 'Sin descripción',
-              cantidad: bom.cantidad || 1
-            });
-          }
-        }
-      });
-
-      const listaPadres = Array.from(padresMap.values());
-      stRelacion.textContent = `OK (${listaPadres.length} registrados)`;
-      stRelacion.className = "status-badge ok";
-
-      if (listaPadres.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay productos padres o componentes asignados.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = '';
-      listaPadres.forEach((padre, index) => {
-        let componentesHtml = '';
-        if (padre.componentes.length > 0) {
-          componentesHtml = '<div class="grid-componentes">' +
-            padre.componentes.map(c => 
-              `<span class="badge-componente">
-                <strong>${c.sku}</strong> ${c.nombre} 
-                <span style="background-color: #e2e8f0; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.78rem; margin-left: 4px;">
-                  x${c.cantidad}
-                </span>
-              </span>`
-            ).join('') +
-            '</div>';
-        } else {
-          componentesHtml = '<span style="color: #dc2626; font-size: 0.85rem;">⚠️ Sin componentes asignados</span>';
-        }
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="text-align: center; color: #94a3b8; font-weight: bold;">${index + 1}</td>
-          <td><strong style="color: var(--accent);">${padre.sku}</strong></td>
-          <td>${padre.nombre}</td>
-          <td style="text-align: center;"><span class="badge-count">${padre.componentes.length}</span></td>
-          <td>${componentesHtml}</td>
-          <td style="text-align: center;">
-            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="abrirModalBom('${padre.sku}', '${padre.nombre.replace(/'/g, "\\'")}')">
-              ✏️ Editar BOM
-            </button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // 4. FUNCIONES DE EDICIÓN DEL MODAL BOM
-    async function abrirModalBom(padreSku, padreNombre) {
-      padreSkuActualBom = padreSku;
-      document.getElementById('bomPadreTitulo').textContent = `${padreSku} - ${padreNombre}`;
-      document.getElementById('modalEditarBom').style.display = 'flex';
-      await cargarListaComponentesBom();
-    }
-
-    function cerrarModalBom() {
-      document.getElementById('modalEditarBom').style.display = 'none';
-      padreSkuActualBom = null;
-      cargarRelacionPadresComponentes();
-    }
-
-    async function cargarListaComponentesBom() {
-      const client = getClient();
-      if (!client || !padreSkuActualBom) return;
-
-      const { data, error } = await client
-        .from('componentes_bom')
-        .select('id, padre_sku, componente_sku, componente_nombre, cantidad')
-        .eq('padre_sku', padreSkuActualBom);
-
-      const tbody = document.getElementById('tablaBomBody');
-      tbody.innerHTML = '';
-
-      if (error || !data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">No hay componentes en la BOM de este producto.</td></tr>';
-        return;
-      }
-
-      data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${item.componente_sku}</strong></td>
-          <td>
-            <input type="text" value="${item.componente_nombre || ''}" style="width: 100%;" onchange="actualizarBomCampo(${item.id}, 'componente_nombre', this.value)">
-          </td>
-          <td>
-            <input type="number" step="0.0001" value="${item.cantidad}" style="width: 100%; font-weight: bold;" onchange="actualizarBomCampo(${item.id}, 'cantidad', parseFloat(this.value))">
-          </td>
-          <td style="text-align: center;">
-            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="eliminarComponenteBomDirecto(${item.id})">🗑️</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function agregarComponenteBomDirecto() {
-      const client = getClient();
-      if (!client || !padreSkuActualBom) return;
-
-      const compSku = document.getElementById('bomNuevoComp').value.trim();
-      const compNombre = document.getElementById('bomNuevoNombre').value.trim();
-      const cantidad = parseFloat(document.getElementById('bomNuevaCantidad').value);
-
-      if (!compSku || isNaN(cantidad) || cantidad <= 0) {
-        return alert('Ingresa el SKU del componente y una cantidad válida.');
-      }
-
-      const payload = {
-        padre_sku: padreSkuActualBom,
-        componente_sku: compSku,
-        componente_nombre: compNombre || compSku,
-        cantidad: cantidad
-      };
-
-      const { error } = await client.from('componentes_bom').insert([payload]);
-
-      if (error) {
-        alert('Error al agregar componente: ' + error.message);
+      const { data: insumos, error: errInsumos } = await client.from('inventario_componentes').select('*').limit(100);
+      if (errInsumos) {
+        stInsumos.textContent = "Error RLS / Red";
+        stInsumos.className = "status-badge err";
+        tbInsumos.innerHTML = `<tr><td colspan="3" style="color:red;">Error: ${errInsumos.message}</td></tr>`;
       } else {
-        document.getElementById('bomNuevoComp').value = '';
-        document.getElementById('bomNuevoNombre').value = '';
-        document.getElementById('bomNuevaCantidad').value = '';
-        cargarListaComponentesBom();
+        stInsumos.textContent = `OK (${insumos.length} registros)`;
+        stInsumos.className = "status-badge ok";
+        tbInsumos.innerHTML = insumos.length === 0 ? '<tr><td colspan="3" style="text-align:center;">La tabla está vacía.</td></tr>' : '';
+        insumos.forEach(i => {
+          tbInsumos.innerHTML += `<tr><td><strong>${i.sku}</strong></td><td>${i.nombre}</td><td>${i.unidad_medida || 'PZA'}</td></tr>`;
+        });
       }
-    }
 
-    async function actualizarBomCampo(idRow, campo, valor) {
-      const client = getClient();
-      if (!client) return;
-
-      const { error } = await client
-        .from('componentes_bom')
-        .update({ [campo]: valor })
-        .eq('id', idRow);
-
-      if (error) alert('Error al actualizar campo: ' + error.message);
-    }
-
-    async function eliminarComponenteBomDirecto(idRow) {
-      if (!confirm('¿Deseas quitar este componente de la receta/BOM?')) return;
-
-      const client = getClient();
-      if (!client) return;
-
-      const { error } = await client
-        .from('componentes_bom')
-        .delete()
-        .eq('id', idRow);
-
-      if (error) {
-        alert('Error al eliminar: ' + error.message);
+      const { data: padres, error: errPadres } = await client.from('productos_padre').select('*').limit(100);
+      if (errPadres) {
+        stPadres.textContent = "Error RLS / Red";
+        stPadres.className = "status-badge err";
+        tbPadres.innerHTML = `<tr><td colspan="2" style="color:red;">Error: ${errPadres.message}</td></tr>`;
       } else {
-        cargarListaComponentesBom();
+        stPadres.textContent = `OK (${padres.length} registros)`;
+        stPadres.className = "status-badge ok";
+        tbPadres.innerHTML = padres.length === 0 ? '<tr><td colspan="2" style="text-align:center;">La tabla está vacía.</td></tr>' : '';
+        padres.forEach(p => {
+          tbPadres.innerHTML += `<tr><td><strong>${p.sku}</strong></td><td>${p.nombre}</td></tr>`;
+        });
       }
     }
 
-    // 5. BÚSQUEDAS AJAX
+    // 4. BÚSQUEDAS AJAX DUALES (SKU O NOMBRE MULTI-TABLA)
     function toggleSelectorPadreAlta(tipo) {
       const wrapperPadre = document.getElementById('wrapperAltaPadre');
       const wrapperUnidad = document.getElementById('wrapperAltaUnidad');
@@ -745,11 +571,13 @@
 
       if (busqueda.length < 2) { box.style.display = 'none'; return; }
 
-      const { data } = await client
+      const { data, error } = await client
         .from('productos_padre')
         .select('sku, nombre')
         .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
         .limit(5);
+
+      if (error) return;
 
       box.innerHTML = '';
       if (data && data.length > 0) {
@@ -770,6 +598,7 @@
       }
     }
 
+    // Búsqueda en Vivo Multi-tabla (inventario_componentes, productos_padre, componentes_bom)
     async function buscarProductoLive(val) {
       const client = getClient();
       const box = document.getElementById('sugProd');
@@ -781,21 +610,57 @@
         return; 
       }
 
-      if (!client) return;
+      if (logBox) logBox.textContent = `⏳ Buscando en tiempo real: "${busqueda}"...`;
+
+      if (!client) {
+        if (logBox) logBox.textContent = `❌ Error: No hay conexión con Supabase. Ingresa tus credenciales en SUPABASE_URL y SUPABASE_KEY.`;
+        return;
+      }
 
       try {
-        const [resComp, resPadre] = await Promise.all([
-          client.from('inventario_componentes').select('sku, nombre, unidad_medida').or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`).limit(5),
-          client.from('productos_padre').select('sku, nombre').or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`).limit(5)
+        const [resComp, resPadre, resBom] = await Promise.all([
+          client
+            .from('inventario_componentes')
+            .select('sku, nombre, unidad_medida, movimientos_inventario(cantidad)')
+            .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+            .limit(5),
+          client
+            .from('productos_padre')
+            .select('sku, nombre')
+            .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
+            .limit(5),
+          client
+            .from('componentes_bom')
+            .select('componente_sku, padre_sku')
+            .or(`componente_sku.ilike.%${busqueda}%,padre_sku.ilike.%${busqueda}%`)
+            .limit(5)
         ]);
 
-        const componentes = (resComp.data || []).map(item => ({ sku: item.sku, nombre: item.nombre, unidad_medida: item.unidad_medida, origenTipo: 'COMPONENTE' }));
-        const padres = (resPadre.data || []).map(item => ({ sku: item.sku, nombre: item.nombre, origenTipo: 'PADRE' }));
+        if (resComp.error || resPadre.error || resBom.error) {
+          const errMsj = resComp.error?.message || resPadre.error?.message || resBom.error?.message;
+          if (logBox) logBox.textContent = `❌ Error de consulta en Supabase: ${errMsj}`;
+          return;
+        }
 
-        const resultados = [...componentes, ...padres];
+        const componentes = (resComp.data || []).map(item => {
+          const stock = (item.movimientos_inventario || []).reduce((acc, m) => acc + Number(m.cantidad), 0);
+          return { sku: item.sku, nombre: item.nombre || 'Componente/Insumo', unidad_medida: item.unidad_medida, stockActual: stock, origenTipo: 'COMPONENTE' };
+        });
+
+        const padres = (resPadre.data || []).map(item => ({ sku: item.sku, nombre: item.nombre, stockActual: 0, origenTipo: 'PADRE' }));
+
+        const boms = (resBom.data || []).map(item => ({
+          sku: item.componente_sku,
+          nombre: `Insumo asociado al Padre: ${item.padre_sku}`,
+          stockActual: 0,
+          origenTipo: 'COMPONENTE'
+        }));
+
+        const unificados = [...componentes, ...padres, ...boms];
+        const resultados = Array.from(new Map(unificados.map(item => [item.sku, item])).values());
 
         if (logBox) {
-          logBox.textContent = `✅ Coincidencias:\n` + JSON.stringify(resultados, null, 2);
+          logBox.textContent = `✅ Búsqueda exitosa (${resultados.length} coincidencias):\n` + JSON.stringify(resultados, null, 2);
         }
 
         if (!box) return;
@@ -806,37 +671,43 @@
           resultados.forEach(item => {
             const div = document.createElement('div');
             div.className = 'suggestion-item';
-            const etiqueta = item.origenTipo === 'COMPONENTE' ? '[Componente]' : '[Producto Padre]';
-            div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre} <small style="color:#2563eb;">${etiqueta}</small>`;
+            
+            const etiquetaTipo = item.origenTipo === 'COMPONENTE' ? '[Componente / BOM]' : '[Producto Padre]';
+            div.innerHTML = `<strong>${item.sku}</strong> - ${item.nombre} <small style="color:#2563eb; font-weight:bold;">${etiquetaTipo} ✏️ Editar</small>`;
+            
             div.onclick = () => {
               document.getElementById('prodSku').value = item.sku;
               document.getElementById('prodNombre').value = item.nombre;
               box.style.display = 'none';
               abrirModalEdicion(item);
             };
+            
             box.appendChild(div);
           });
         } else {
           box.style.display = 'none';
         }
       } catch (err) {
-        if (logBox) logBox.textContent = `💥 Error: ${err.message}`;
+        if (logBox) logBox.textContent = `💥 Error JS inesperado: ${err.message}`;
       }
     }
 
     async function buscarInsumoLive(val, boxId, inputId) {
       const client = getClient();
       if (!client) return;
+
       const box = document.getElementById(boxId);
       const busqueda = val ? val.trim() : '';
 
       if (busqueda.length < 2) { box.style.display = 'none'; return; }
 
-      const { data } = await client
+      const { data, error } = await client
         .from('inventario_componentes')
         .select('sku, nombre')
         .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
         .limit(5);
+
+      if (error) return;
 
       box.innerHTML = '';
       if (data && data.length > 0) {
@@ -859,16 +730,19 @@
     async function buscarPadreLive(val) {
       const client = getClient();
       if (!client) return;
+
       const box = document.getElementById('sugOF');
       const busqueda = val ? val.trim() : '';
 
       if (busqueda.length < 2) { box.style.display = 'none'; return; }
 
-      const { data } = await client
+      const { data, error } = await client
         .from('productos_padre')
         .select('sku, nombre')
         .or(`sku.ilike.%${busqueda}%,nombre.ilike.%${busqueda}%`)
         .limit(5);
+
+      if (error) return;
 
       box.innerHTML = '';
       if (data && data.length > 0) {
@@ -895,7 +769,7 @@
       document.getElementById('editSku').value = producto.sku;
       document.getElementById('editNombre').value = producto.nombre || '';
       document.getElementById('editUnidad').value = producto.unidad_medida || 'PZA';
-      document.getElementById('editCantidadPiezas').value = 0;
+      document.getElementById('editCantidadPiezas').value = producto.stockActual || 0;
 
       toggleCamposEdicion(producto.origenTipo);
       document.getElementById('modalEditarProducto').style.display = 'flex';
@@ -927,111 +801,175 @@
       const tipoNuevo = document.getElementById('editTipoNuevo').value;
       const nombre = document.getElementById('editNombre').value.trim();
       const unidad = document.getElementById('editUnidad').value.trim();
+      const nuevaCantidad = parseFloat(document.getElementById('editCantidadPiezas').value) || 0;
 
       if (!nombre) return alert('El nombre es obligatorio.');
 
       if (tipoOriginal !== tipoNuevo) {
         if (tipoOriginal === 'COMPONENTE' && tipoNuevo === 'PADRE') {
           await client.from('inventario_componentes').delete().eq('sku', sku);
-          await client.from('productos_padre').insert([{ sku: sku, nombre: nombre }]);
-        } else {
+          const { error } = await client.from('productos_padre').insert([{ sku: sku, nombre: nombre }]);
+          if (error) return alert("Error al migrar a Producto Padre: " + error.message);
+        } else if (tipoOriginal === 'PADRE' && tipoNuevo === 'COMPONENTE') {
           await client.from('productos_padre').delete().eq('sku', sku);
-          await client.from('inventario_componentes').insert([{ sku: sku, nombre: nombre, unidad_medida: unidad }]);
+          const { error } = await client.from('inventario_componentes').insert([{ sku: sku, nombre: nombre, unidad_medida: unidad }]);
+          if (error) return alert("Error al migrar a Componente: " + error.message);
         }
       } else {
         if (tipoNuevo === 'COMPONENTE') {
-          await client.from('inventario_componentes').update({ nombre: nombre, unidad_medida: unidad }).eq('sku', sku);
+          const { error } = await client
+            .from('inventario_componentes')
+            .update({ nombre: nombre, unidad_medida: unidad })
+            .eq('sku', sku);
+          if (error) return alert("Error al actualizar componente: " + error.message);
         } else {
-          await client.from('productos_padre').update({ nombre: nombre }).eq('sku', sku);
+          const { error } = await client
+            .from('productos_padre')
+            .update({ nombre: nombre })
+            .eq('sku', sku);
+          if (error) return alert("Error al actualizar producto padre: " + error.message);
         }
       }
 
-      alert("Producto actualizado correctamente.");
+      if (tipoNuevo === 'COMPONENTE') {
+        const { data: movs } = await client
+          .from('movimientos_inventario')
+          .select('cantidad')
+          .eq('componente_sku', sku);
+
+        const stockActual = (movs || []).reduce((acc, m) => acc + Number(m.cantidad), 0);
+        const diferencia = nuevaCantidad - stockActual;
+
+        if (diferencia !== 0) {
+          await client.from('movimientos_inventario').insert([{
+            componente_sku: sku,
+            tipo_movimiento: 'AJUSTE_INVENTARIO',
+            cantidad: diferencia,
+            referencia_doc: 'Ajuste desde Edición',
+            fecha_movimiento: new Date().toISOString()
+          }]);
+        }
+      }
+
+      alert("Producto y stock actualizados correctamente.");
       cerrarModalEdicion();
-      cargarRelacionPadresComponentes();
+      document.getElementById('prodSku').value = '';
+      cargarCatalogoCompleto();
       cargarStockAFecha();
     }
 
-    // DIAGNÓSTICO EN TIEMPO REAL
+    // DIAGNÓSTICO EN TIEMPO REAL MULTI-TABLA
     async function probarBusquedaAjaxDirecta(valor) {
       const client = getClient();
       const logBox = document.getElementById('debugLog');
-      if (!client) return;
+
+      if (!client) {
+        logBox.textContent = "❌ Error: El cliente de Supabase no está inicializado. Revisa SUPABASE_URL y SUPABASE_KEY.";
+        return;
+      }
 
       const query = (valor !== undefined ? valor : document.getElementById('testQuery').value).trim();
-      if (!query || query.length < 2) return;
 
-      logBox.textContent = `⏳ Buscando: "${query}"...\n`;
+      if (!query || query.length < 2) {
+        logBox.textContent = "Esperando entrada (mínimo 2 caracteres)...";
+        return;
+      }
 
-      const [resComp, resPadre, resBom] = await Promise.all([
-        client.from('inventario_componentes').select('sku, nombre').or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`),
-        client.from('productos_padre').select('sku, nombre').or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`),
-        client.from('componentes_bom').select('*').or(`componente_sku.ilike.%${query}%,padre_sku.ilike.%${query}%`)
-      ]);
+      logBox.textContent = `⏳ Ejecutando consulta AJAX a Supabase para: "${query}"...\n`;
 
-      logBox.textContent = `🔎 RESULTADOS DE BÚSQUEDA:\n` +
-        `📦 Componentes: ${JSON.stringify(resComp.data)}\n\n` +
-        `👑 Padres: ${JSON.stringify(resPadre.data)}\n\n` +
-        `🧩 Relaciones BOM: ${JSON.stringify(resBom.data)}`;
+      try {
+        const [resComp, resPadre, resBom] = await Promise.all([
+          client
+            .from('inventario_componentes')
+            .select('sku, nombre, unidad_medida')
+            .or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`)
+            .limit(10),
+          client
+            .from('productos_padre')
+            .select('sku, nombre')
+            .or(`sku.ilike.%${query}%,nombre.ilike.%${query}%`)
+            .limit(10),
+          client
+            .from('componentes_bom')
+            .select('componente_sku, padre_sku')
+            .or(`componente_sku.ilike.%${query}%,padre_sku.ilike.%${query}%`)
+            .limit(10)
+        ]);
+
+        let logText = `🔎 RESULTADOS EN TIEMPO REAL PARA: "${query}"\n\n`;
+
+        if (resComp.error) {
+          logText += `❌ Error en inventario_componentes: ${resComp.error.message}\n`;
+        } else {
+          logText += `📦 Tabla 'inventario_componentes' (${resComp.data.length}):\n`;
+          logText += JSON.stringify(resComp.data, null, 2) + "\n\n";
+        }
+
+        if (resPadre.error) {
+          logText += `❌ Error en productos_padre: ${resPadre.error.message}\n`;
+        } else {
+          logText += `👑 Tabla 'productos_padre' (${resPadre.data.length}):\n`;
+          logText += JSON.stringify(resPadre.data, null, 2) + "\n\n";
+        }
+
+        if (resBom.error) {
+          logText += `❌ Error en componentes_bom: ${resBom.error.message}\n`;
+        } else {
+          logText += `🧩 Tabla 'componentes_bom' (${resBom.data.length}):\n`;
+          logText += JSON.stringify(resBom.data, null, 2) + "\n";
+        }
+
+        logBox.textContent = logText;
+      } catch (err) {
+        logBox.textContent = `💥 Excepción inesperada: ${err.message}`;
+      }
     }
 
-    // 6. GUARDAR NUEVO PRODUCTO Y VINCULAR MEDIANTE PADRE_SKU (CON PARSER DE COMA PARA CANTIDAD)
+    // 5. GUARDAR NUEVO PRODUCTO Y RELACIÓN CON PADRE
     async function guardarProducto() {
       const client = getClient();
       if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
 
       const tipo = document.getElementById('prodTipo').value;
-      const inputSkuRaw = document.getElementById('prodSku').value.trim();
+      const sku = document.getElementById('prodSku').value.trim();
       const nombre = document.getElementById('prodNombre').value.trim();
       const unidad = document.getElementById('prodUnidad').value.trim();
       const padreSku = document.getElementById('prodPadreSkuSelected').value.trim();
 
-      if (!inputSkuRaw || !nombre) return alert('Por favor ingresa SKU y Nombre del producto.');
-
-      let skuLimpio = inputSkuRaw;
-      let cantidadRequerida = 1;
-
-      // PARSER PARA SEPARAR SKU Y CANTIDAD DESPUÉS DE LA COMA
-      if (inputSkuRaw.includes(',')) {
-        const partes = inputSkuRaw.split(',');
-        skuLimpio = partes[0].trim();
-        const numParsed = parseFloat(partes[1]);
-        if (!isNaN(numParsed) && numParsed > 0) {
-          cantidadRequerida = numParsed;
-        }
+      if (!sku || !nombre) {
+        return alert('Por favor ingresa SKU y Nombre del producto.');
       }
 
       if (tipo === 'COMPONENTE') {
-        const payload = { sku: skuLimpio, nombre: nombre, unidad_medida: unidad };
-        if (padreSku) payload.padre_sku = padreSku;
-
         const { error: errComp } = await client
           .from('inventario_componentes')
-          .upsert([payload], { onConflict: 'sku' });
+          .upsert([{ sku: sku, nombre: nombre, unidad_medida: unidad }], { onConflict: 'sku' });
 
         if (errComp) return alert("Error al guardar componente: " + errComp.message);
 
         if (padreSku) {
-          await client.from('componentes_bom').upsert([{ 
-            padre_sku: padreSku, 
-            componente_sku: skuLimpio, 
-            componente_nombre: nombre, 
-            cantidad: cantidadRequerida 
-          }]);
+          const { error: errBom } = await client
+            .from('componentes_bom')
+            .upsert([{ padre_sku: padreSku, componente_sku: sku, cantidad: 1 }]);
+
+          if (errBom) console.error("Error vinculando a BOM Padre:", errBom.message);
         }
       } else {
-        const { error } = await client.from('productos_padre').upsert([{ sku: skuLimpio, nombre: nombre }], { onConflict: 'sku' });
+        const { error } = await client
+          .from('productos_padre')
+          .upsert([{ sku: sku, nombre: nombre }], { onConflict: 'sku' });
+
         if (error) return alert("Error al guardar producto padre: " + error.message);
       }
 
-      alert(`Producto guardado con éxito (SKU: ${skuLimpio}, Cantidad requerida: ${cantidadRequerida}).`);
+      alert("Producto guardado correctamente.");
       document.getElementById('formNuevoProducto').reset();
       document.getElementById('prodPadreSkuSelected').value = '';
       cargarStockAFecha();
-      cargarRelacionPadresComponentes();
+      cargarCatalogoCompleto();
     }
 
-    // 7. CONTROL DE INVENTARIO A LA FECHA
+    // 6. CONTROL DE INVENTARIO A LA FECHA (KARDEX)
     async function cargarStockAFecha() {
       const client = getClient();
       if (!client) return;
@@ -1039,12 +977,22 @@
       const fechaSeleccionada = document.getElementById('filtroFecha').value || new Date().toISOString().split('T')[0];
       const fechaCorte = `${fechaSeleccionada}T23:59:59`;
 
-      const { data } = await client.from('inventario_componentes').select(`sku, nombre, unidad_medida, movimientos_inventario ( cantidad, fecha_movimiento )`);
+      const { data, error } = await client
+        .from('inventario_componentes')
+        .select(`
+          sku,
+          nombre,
+          unidad_medida,
+          movimientos_inventario ( cantidad, fecha_movimiento )
+        `);
+
+      if (error) return console.error("Error al cargar inventario:", error.message);
+
       const tbody = document.getElementById('tablaKardex');
       tbody.innerHTML = '';
 
       if(!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay componentes registrados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay componentes registrados en el catálogo.</td></tr>';
         return;
       }
 
@@ -1059,13 +1007,17 @@
           <td>${item.nombre}</td>
           <td>${item.unidad_medida || 'PZA'}</td>
           <td><strong>${stockAcumulado.toLocaleString()}</strong></td>
-          <td><span style="color: ${stockAcumulado > 0 ? 'green' : 'red'}; font-weight: bold;">● ${stockAcumulado > 0 ? 'Disponible' : 'Sin Stock'}</span></td>
+          <td>
+            <span style="color: ${stockAcumulado > 0 ? 'green' : 'red'}; font-weight: bold;">
+              ● ${stockAcumulado > 0 ? 'Disponible' : 'Sin Stock'}
+            </span>
+          </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // 8. MOVIMIENTOS
+    // 7. ENTRADAS / SALIDAS DIRECTAS
     async function registrarMovimientoDirecto(tipo) {
       const client = getClient();
       if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
@@ -1075,42 +1027,73 @@
       let cantidad = parseFloat(document.getElementById(isCompra ? 'inCantidad' : 'outCantidad').value);
       const doc = document.getElementById(isCompra ? 'inDoc' : 'outDoc').value;
 
-      if (!sku || isNaN(cantidad) || cantidad <= 0) return alert('Por favor completa todos los campos.');
+      if (!sku || isNaN(cantidad) || cantidad <= 0) {
+        return alert('Por favor completa todos los campos.');
+      }
+
       if (!isCompra) cantidad = -Math.abs(cantidad);
 
-      const { error } = await client.from('movimientos_inventario').insert([{
-        componente_sku: sku, tipo_movimiento: tipo, cantidad: cantidad, referencia_doc: doc, fecha_movimiento: new Date().toISOString()
-      }]);
+      const { error } = await client
+        .from('movimientos_inventario')
+        .insert([{
+          componente_sku: sku,
+          tipo_movimiento: tipo,
+          cantidad: cantidad,
+          referencia_doc: doc,
+          fecha_movimiento: new Date().toISOString()
+        }]);
 
-      if (error) alert("Error: " + error.message);
-      else {
-        alert("Movimiento registrado.");
+      if (error) {
+        alert("Error al registrar: " + error.message);
+      } else {
+        alert("Movimiento registrado con éxito.");
         document.getElementById(isCompra ? 'formEntradas' : 'formSalidas').reset();
         cargarStockAFecha();
       }
     }
 
-    // 9. ÓRDENES Y SURTIDO
+    // 8. ÓRDENES DE PRODUCCIÓN Y SURTIDO
     function abrirModalOF() { document.getElementById('modalNuevaOF').style.display = 'flex'; }
     function cerrarModalOF() { document.getElementById('modalNuevaOF').style.display = 'none'; }
 
     async function guardarOrdenProduccion() {
       const client = getClient();
-      if (!client) return;
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
 
       const padreSku = document.getElementById('ofPadreSku').value;
       const cantidad = parseFloat(document.getElementById('ofCantidad').value);
 
-      if(!padreSku || isNaN(cantidad) || cantidad <= 0) return alert('Ingresa SKU Padre y cantidad válida.');
+      if(!padreSku || isNaN(cantidad) || cantidad <= 0) {
+        return alert('Ingresa un SKU de producto padre y una cantidad válida.');
+      }
 
-      const { data: orden } = await client.from('ordenes_produccion').insert([{ padre_sku: padreSku, cantidad_a_fabricar: cantidad, estado: 'PLANIFICADA' }]).select().single();
-      const { data: bom } = await client.from('componentes_bom').select('componente_sku, cantidad').eq('padre_sku', padreSku);
+      const { data: orden, error: errOrden } = await client
+        .from('ordenes_produccion')
+        .insert([{ padre_sku: padreSku, cantidad_a_fabricar: cantidad, estado: 'PLANIFICADA' }])
+        .select()
+        .single();
 
-      if (bom && bom.length > 0) {
+      if (errOrden) return alert("Error al crear la orden: " + errOrden.message);
+
+      const { data: bom, error: errBom } = await client
+        .from('componentes_bom')
+        .select('componente_sku, cantidad')
+        .eq('padre_sku', padreSku);
+
+      if (errBom) {
+        console.error("Error al consultar componentes_bom:", errBom.message);
+      } else if (bom && bom.length > 0) {
         const listaSurtido = bom.map(item => ({
-          orden_folio: orden.folio, componente_sku: item.componente_sku, cantidad_requerida: item.cantidad * cantidad, cantidad_surtida: 0, estado_surtido: 'PENDIENTE'
+          orden_folio: orden.folio,
+          componente_sku: item.componente_sku,
+          cantidad_requerida: item.cantidad * cantidad,
+          cantidad_surtida: 0,
+          estado_surtido: 'PENDIENTE'
         }));
+
         await client.from('surtido_almacen').insert(listaSurtido);
+      } else {
+        alert("Atención: El producto padre no tiene componentes asociados en componentes_bom.");
       }
 
       cerrarModalOF();
@@ -1121,12 +1104,26 @@
     async function cargarOrdenesProduccion() {
       const client = getClient();
       if (!client) return;
-      const { data } = await client.from('ordenes_produccion').select('*').order('folio', { ascending: false });
+
+      const { data, error } = await client
+        .from('ordenes_produccion')
+        .select('*')
+        .order('folio', { ascending: false });
+
+      if (error) return;
+
       const tbody = document.getElementById('tablaOrdenes');
       tbody.innerHTML = '';
-      (data || []).forEach(of => {
+
+      data.forEach(of => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td><strong>OF-${of.folio}</strong></td><td>${of.padre_sku}</td><td>${of.cantidad_a_fabricar}</td><td><span style="color: var(--warning); font-weight:bold;">${of.estado}</span></td><td>${new Date(of.fecha_creacion).toLocaleDateString()}</td>`;
+        tr.innerHTML = `
+          <td><strong>OF-${of.folio}</strong></td>
+          <td>${of.padre_sku}</td>
+          <td>${of.cantidad_a_fabricar}</td>
+          <td><span style="color: var(--warning); font-weight:bold;">${of.estado}</span></td>
+          <td>${new Date(of.fecha_creacion).toLocaleDateString()}</td>
+        `;
         tbody.appendChild(tr);
       });
     }
@@ -1134,16 +1131,31 @@
     async function cargarSurtidoAlmacen() {
       const client = getClient();
       if (!client) return;
-      const { data } = await client.from('surtido_almacen').select('*').order('id', { ascending: false });
+
+      const { data, error } = await client
+        .from('surtido_almacen')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) return;
+
       const tbody = document.getElementById('tablaSurtido');
       tbody.innerHTML = '';
-      (data || []).forEach(s => {
+
+      data.forEach(s => {
         const tr = document.createElement('tr');
         const esPendiente = s.estado_surtido === 'PENDIENTE';
         tr.innerHTML = `
-          <td>OF-${s.orden_folio}</td><td><strong>${s.componente_sku}</strong></td><td>${s.cantidad_requerida}</td><td>${s.cantidad_surtida}</td>
+          <td>OF-${s.orden_folio}</td>
+          <td><strong>${s.componente_sku}</strong></td>
+          <td>${s.cantidad_requerida}</td>
+          <td>${s.cantidad_surtida}</td>
           <td><span style="color: ${esPendiente ? 'red' : 'green'}; font-weight:bold;">${s.estado_surtido}</span></td>
-          <td>${esPendiente ? `<button class="btn btn-success" style="padding:4px 8px; font-size:0.8rem;" onclick="despacharSurtido(${s.id}, '${s.componente_sku}', ${s.cantidad_requerida}, ${s.orden_folio})">Despachar</button>` : 'Surtido'}</td>
+          <td>
+            ${esPendiente 
+              ? `<button class="btn btn-success" style="padding:4px 8px; font-size:0.8rem;" onclick="despacharSurtido(${s.id}, '${s.componente_sku}', ${s.cantidad_requerida}, ${s.orden_folio})">Despachar</button>` 
+              : 'Surtido'}
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -1151,12 +1163,26 @@
 
     async function despacharSurtido(surtidoId, sku, cantidad, folio) {
       const client = getClient();
-      if (!client) return;
+      if (!client) return alert('Atención: No hay conexión a Supabase configurada.');
 
-      await client.from('movimientos_inventario').insert([{ componente_sku: sku, tipo_movimiento: 'CONSUMO_PRODUCCION', cantidad: -Math.abs(cantidad), referencia_doc: `OF-${folio}`, fecha_movimiento: new Date().toISOString() }]);
-      await client.from('surtido_almacen').update({ cantidad_surtida: cantidad, estado_surtido: 'COMPLETO' }).eq('id', surtidoId);
+      const { error: errMov } = await client
+        .from('movimientos_inventario')
+        .insert([{
+          componente_sku: sku,
+          tipo_movimiento: 'CONSUMO_PRODUCCION',
+          cantidad: -Math.abs(cantidad),
+          referencia_doc: `OF-${folio}`,
+          fecha_movimiento: new Date().toISOString()
+        }]);
 
-      alert("Surtido despachado.");
+      if (errMov) return alert("Error al entregar insumo: " + errMov.message);
+
+      await client
+        .from('surtido_almacen')
+        .update({ cantidad_surtida: cantidad, estado_surtido: 'COMPLETO' })
+        .eq('id', surtidoId);
+
+      alert("Insumo entregado a producción y stock descontado.");
       cargarStockAFecha();
       cargarSurtidoAlmacen();
     }
